@@ -21,13 +21,21 @@ class KeypointProposer:
 
     def get_keypoints(self, rgb, points, masks):
         # preprocessing
+        print("masks shape before preprocessing")
+        print(masks[0].shape)
         transformed_rgb, rgb, points, masks, shape_info = self._preprocess(rgb, points, masks)
+        print("masks shape after preprocessing")
+        print(masks[0].shape)
         # get features
         features_flat = self._get_features(transformed_rgb, shape_info)
         # for each mask, cluster in feature space to get meaningful regions, and uske their centers as keypoint candidates
         candidate_keypoints, candidate_pixels, candidate_rigid_group_ids = self._cluster_features(points, features_flat, masks)
         # exclude keypoints that are outside of the workspace
+        print("candidate_keypoints.shape")
+        print(candidate_keypoints.shape)
         within_space = filter_points_by_bounds(candidate_keypoints, self.bounds_min, self.bounds_max, strict=True)
+        print("within_space.shape")
+        print(within_space.shape)
         candidate_keypoints = candidate_keypoints[within_space]
         candidate_pixels = candidate_pixels[within_space]
         candidate_rigid_group_ids = candidate_rigid_group_ids[within_space]
@@ -63,6 +71,9 @@ class KeypointProposer:
             'patch_h': patch_h,
             'patch_w': patch_w,
         }
+
+        print("masks shape after preprocessing")
+        print(masks[0].shape)
         return transformed_rgb, rgb, points, masks, shape_info
     
     def _project_keypoints_to_img(self, rgb, candidate_pixels, candidate_rigid_group_ids, masks, features_flat):
@@ -107,6 +118,8 @@ class KeypointProposer:
         candidate_keypoints = []
         candidate_pixels = []
         candidate_rigid_group_ids = []
+        print("masks shape after clustering features")
+        print(masks[0].shape)
         for rigid_group_id, binary_mask in enumerate(masks):
             # ignore mask that is too large
             if np.mean(binary_mask) > self.config['max_mask_ratio']:
@@ -115,6 +128,7 @@ class KeypointProposer:
             obj_features_flat = features_flat[binary_mask.reshape(-1)]
             feature_pixels = np.argwhere(binary_mask)
             feature_points = points[binary_mask]
+            print(feature_points.shape)
             # reduce dimensionality to be less sensitive to noise and texture
             obj_features_flat = obj_features_flat.double()
             (u, s, v) = torch.pca_lowrank(obj_features_flat, center=False)
